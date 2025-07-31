@@ -1,0 +1,12 @@
+{
+  "title": "Clinical Reasoning & Organisation",
+  "checklist": [
+    "Elicits information with logical, hypothesis-driven flow (no random jumps)",
+    "Begins each topic area with broad, open-ended enquiry before focusing down",
+    "Maintains canonical history order (HPI → ROS → PMH → Meds → Allergies → Social)",
+    "Explicitly screens for ‘red-flag’ symptoms or time-critical dangers early",
+    "Pursues abnormal or alarming answers with appropriate follow-up questions",
+    "Generates a sensible, articulated differential diagnosis during or at close",
+    "Verbally prioritises the most probable / most dangerous diagnoses with brief justification"
+  ]
+}

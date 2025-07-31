@@ -1,0 +1,38 @@
+{
+  "session": "MedAIRevised",
+  "results": [
+    {
+      "title": "Communication & Engagement",
+      "score": 100.0,
+      "scores": {
+        "Greets patient, introduces self & clarifies role": 1,
+        "Uses clear, jargon-free language at an appropriate pace": 1,
+        "Employs an empathetic, respectful tone throughout": 1,
+        "Validates patient concerns aloud (e.g. “I understand this is worrying…”)": 1,
+        "Practises active listening (paraphrases / summaries to confirm)": 1,
+        "Avoids interruptions and negative non-verbals (eye-rolling, sighs)": 1,
+        "Adapts explanations to patient’s emotional & educational level": 1,
+        "Periodically checks understanding or invites questions": 1,
+        "Responds appropriately to verbal **and** non-verbal patient cues": 1
+      },
+      "explanation": "The provider demonstrated excellent communication skills, using clear language, showing empathy, and actively listening. They validated concerns, adapted explanations, and invited questions, ensuring patient understanding.",
+      "trace": "Greets patient, introduces self & clarifies role; Uses clear, jargon-free language; Validates patient concerns aloud; Practises active listening; Periodically checks understanding or invites questions."
+    },
+    {
+      "title": "Professionalism & Behaviour",
+      "score": 88.0,
+      "scores": {
+        "Maintains respectful verbal & non-verbal demeanour": 1,
+        "Appropriate attire and professional grooming": 0,
+        "Performs hand hygiene before **and** after patient contact": 1,
+        "Keeps suitable physical distance; observes boundaries": 1,
+        "Seeks explicit consent before sensitive questions or exam": 1,
+        "Controls facial expressions & tone (no sighs, eye-rolls, sarcasm)": 1,
+        "Remains calm and composed under pressure or uncertainty": 1,
+        "Thanks patient, clarifies next steps, and closes visit courteously": 1
+      },
+      "explanation": "The professional maintained a respectful demeanor, sought consent, and performed hand hygiene. Attire was not visible, so it couldn't be assessed. The professional remained calm and closed the visit courteously.",
+      "trace": "Hand hygiene: 'sanitize'; Consent: 'Is it okay if I untie it?'; Closure: 'Thank you so much'"
+    }
+  ]
+}
