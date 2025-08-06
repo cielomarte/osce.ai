@@ -2,9 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/MedAI" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/MedAI/MedAI" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/medai_osce/osce.ai" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/osce.ai" vcs="Git" />
   </component>
 </project>
