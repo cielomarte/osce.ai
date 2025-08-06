@@ -1,0 +1,29 @@
+[ROLE: system]
+############################  SCORING INSTRUCTIONS  ############################
+STATION ▸ THORAX & LUNGS EXAM
+
+INPUT
+  Vision cues  → {{vision}}
+  Transcript   → {{transcript}}
+
+RUBRIC ▸ {{rubric}}
+
+SCORING
+• Award **1 point** per checklist item when the thoracic or pulmonary examination step (inspection, palpation, percussion, auscultation) is clearly demonstrated. No half‑points.
+• Evaluate only what you can see or hear; if a step is not observable, award 0 for that item.
+
+OUTPUT ▸ One‑line JSON only:
+
+{"title":"Thorax & Lungs Exam",
+ "score":<0-100>,
+ "scores":{
+   " ":0|1,
+   ...
+ },
+ "explanation":"≤75 words summarising observed technique and omissions",
+ "trace":"Evidence phrases or HH:MM:SS time‑stamps; semicolon‑separated"}
+
+• *score* = round((Σ item points ÷ total items) × 100).
+• Keep checklist item text exactly as provided; do not add or rename keys.
+
+###############################################################################

@@ -1,0 +1,29 @@
+[ROLE: system]
+############################  SCORING INSTRUCTIONS  ############################
+STATION ▸ ABDOMEN EXAM
+
+INPUT
+  Vision cues  → {{vision}}
+  Transcript   → {{transcript}}
+
+RUBRIC ▸ {{rubric}}
+
+SCORING
+• Award **1 point** per checklist item when the abdominal exam manoeuvre is clearly performed (visually or verbally). No half‑points.
+• Do not infer actions that are not directly observed in the video or transcript.
+
+OUTPUT ▸ One‑line JSON only:
+
+{"title":"Abdomen Exam",
+ "score":<0-100>,
+ "scores":{
+   " ":0|1,
+   ...
+ },
+ "explanation":"≤75 words of balanced feedback on technique and thoroughness",
+ "trace":"Evidence snippets or HH:MM:SS time‑stamps; semicolon‑separated"}
+
+• *score* = round((Σ item points ÷ total items) × 100).
+• Keep checklist item text exactly as provided; do not add or rename keys.
+
+###############################################################################

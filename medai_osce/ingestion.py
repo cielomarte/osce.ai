@@ -1,155 +1,100 @@
-"""Media ingestion utilities for the simplified OSCE pipeline.
+"""
+ingestion.py – load session videos, sample frames, and stream audio.
 
-This module contains functions to extract audio from video files and to
-sample image frames at a fixed interval.  It relies on the `ffmpeg`
-binary (via subprocess for frame extraction and ffmpeg-python for audio
-extraction).  Ensure you have `ffmpeg` installed on your system.
+This refactored module avoids temporary audio files and exposes an audio_stream
+generator that yields small WAV chunks directly from ffmpeg.  It still
+discovers video files and samples frames for non‑verbal analysis.
 """
 
 from __future__ import annotations
 
-import subprocess
-import tempfile
-from pathlib import Path
-from typing import List, Sequence
+import io
+import os
+from typing import Generator, List, Tuple
 
 import ffmpeg  # type: ignore
-from PIL import Image
 import numpy as np
+from PIL import Image
+
+try:
+    import cv2  # Efficient video decoding
+except ImportError:
+    cv2 = None  # Fall back to PIL if unavailable
+
+VIDEO_EXTS = (".mp4", ".m4v", ".mov", ".mkv")
 
 
-def extract_audio(video_paths: Sequence[str], out_dir: str | None = None) -> Path:
-    """Extract a mono 16 kHz WAV file from the first available video.
-
-    Parameters
-    ----------
-    video_paths:
-        A sequence of video file paths.  The first path that exists on
-        disk will be used for audio extraction.  If a separate room
-        microphone recording is available (e.g. `room_audio.wav`), you
-        should pass it as the only element in `video_paths`.
-    out_dir:
-        Directory where the extracted WAV file will be written.  If
-        ``None``, a temporary directory is created.
-
-    Returns
-    -------
-    Path
-        The path to the extracted WAV file.
-
-    Raises
-    ------
-    FileNotFoundError:
-        If none of the provided paths exist.
-    RuntimeError:
-        If ffmpeg fails to extract the audio.
-    """
-    if not video_paths:
-        raise ValueError("video_paths must be non-empty")
-    src: Path | None = None
-    for vp in video_paths:
-        p = Path(vp)
-        if p.exists():
-            src = p
-            break
-    if src is None:
-        raise FileNotFoundError(f"None of the provided video paths exist: {video_paths}")
-
-    out_dir = out_dir or tempfile.mkdtemp(prefix="medai_audio_")
-    out_path = Path(out_dir) / (src.stem + ".wav")
-
-    try:
-        (
-            ffmpeg
-            .input(str(src))
-            .output(str(out_path), ac=1, ar=16000, format="wav")
-            .run(quiet=True, overwrite_output=True)
-        )
-    except ffmpeg.Error as e:
-        raise RuntimeError(f"ffmpeg failed: {e.stderr}") from e
-
-    return out_path
-
-
-def sample_frames(video_path: str, fps: float = 0.5, max_frames: int | None = None) -> List[Image.Image]:
-    """Sample frames from a video at a given rate and return PIL Images.
-
-    Parameters
-    ----------
-    video_path:
-        Path to a video file from which to extract frames.
-    fps:
-        Number of frames per second to sample.  A value of 0.5 means one
-        frame every two seconds.  The default of 0.5 yields a small
-        number of frames for long videos and is suitable for scoring
-        behavioural rubrics.
-    max_frames:
-        Optional cap on the total number of frames returned.  If set
-        to ``None``, all sampled frames are returned.
-
-    Returns
-    -------
-    List[Image.Image]
-        A list of PIL Image objects in RGB mode.
-
-    Raises
-    ------
-    FileNotFoundError:
-        If the video file does not exist.
-    RuntimeError:
-        If ffmpeg or ffprobe fails.
-    """
-    video = Path(video_path)
-    if not video.exists():
-        raise FileNotFoundError(f"Video not found: {video_path}")
-
-    # Construct the ffmpeg command.  Place -vframes right after the input.
-    args = ["ffmpeg", "-i", str(video)]
-    if max_frames is not None:
-        args += ["-vframes", str(max_frames)]
-    args += [
-        "-vf", f"fps={fps}",
-        "-f", "image2pipe",
-        "-pix_fmt", "rgb24",
-        "-vcodec", "rawvideo",
-        "-"
+def discover_videos(session_dir: str, exts: Tuple[str, ...] = VIDEO_EXTS) -> List[str]:
+    """Return absolute paths to all video files in ``session_dir`` with allowed extensions."""
+    return [
+        os.path.join(session_dir, f)
+        for f in os.listdir(session_dir)
+        if f.lower().endswith(exts)
     ]
 
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    # Determine frame dimensions using ffprobe
+def sample_frames(video_path: str, num_frames: int = 6) -> List[Image.Image]:
+    """
+    Sample ``num_frames`` frames uniformly across a video.  Uses OpenCV for speed.
+    """
+    if cv2 is None:
+        raise RuntimeError("OpenCV is required for frame sampling but is not installed.")
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open {video_path}")
+
+    count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if count <= 0:
+        cap.release()
+        return []
+
+    indices = np.linspace(0, count - 1, num_frames, dtype=int)
+    images: List[Image.Image] = []
+    for idx in indices:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, float(idx))
+        ret, frame = cap.read()
+        if ret:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            images.append(Image.fromarray(frame_rgb))
+    cap.release()
+    return images
+
+
+def audio_stream(
+    video_path: str, chunk_duration: float = 10.0, sample_rate: int = 16000
+) -> Generator[bytes, None, None]:
+    """
+    Yield contiguous WAV byte chunks from the video's audio track.
+
+    Each yielded chunk contains up to ``chunk_duration`` seconds of mono audio
+    at ``sample_rate`` Hz.  A single ffmpeg process is spawned per chunk.
+    """
     try:
-        probe = ffmpeg.probe(str(video))
-        streams = probe.get("streams", [])
-        vs = next((s for s in streams if s.get("codec_type") == "video"), None)
-        if vs is None:
-            raise RuntimeError("No video stream found")
-        width = int(vs["width"])
-        height = int(vs["height"])
+        info = ffmpeg.probe(video_path)
     except ffmpeg.Error as e:
-        proc.kill()
-        raise RuntimeError(f"ffprobe failed: {e.stderr}") from e
+        raise RuntimeError(f"Could not probe {video_path}: {e.stderr}") from e
 
-    frames: List[Image.Image] = []
-    frame_size = width * height * 3  # for RGB24
-    count = 0
-
-    while True:
-        if max_frames is not None and count >= max_frames:
+    duration = float(info["format"]["duration"])
+    t = 0.0
+    while t < duration:
+        # Seek to ``t`` seconds and extract ``chunk_duration`` seconds of audio
+        process = (
+            ffmpeg.input(video_path, ss=t, t=chunk_duration)
+            .output("pipe:", format="wav", ac=1, ar=str(sample_rate))
+            .run_async(pipe_stdout=True, pipe_stderr=True)
+        )
+        out, _ = process.communicate()
+        process.kill()
+        if not out:
             break
-        raw = proc.stdout.read(frame_size)
-        if not raw:
-            break
-        arr = np.frombuffer(raw, np.uint8).reshape((height, width, 3))
-        frames.append(Image.fromarray(arr, "RGB"))
-        count += 1
+        yield out
+        t += chunk_duration
 
-    stderr = proc.stderr.read()
-    proc.stdout.close()
-    proc.stderr.close()
-    proc.wait()
 
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg returned error code {proc.returncode}: {stderr.decode()}")
-
-    return frames
+def load_entire_audio(video_path: str, sample_rate: int = 16000) -> bytes:
+    """
+    Convenience function to read the entire audio track into memory as WAV bytes.
+    Uses ``audio_stream`` with an effectively infinite chunk size.
+    """
+    return b"".join(audio_stream(video_path, chunk_duration=1e9, sample_rate=sample_rate))

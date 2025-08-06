@@ -1,71 +1,117 @@
-"""ASR wrapper for the simplified OSCE pipeline.
+"""
+asr.py – streaming and offline transcription using faster_whisper.
 
-This module wraps a pre‑trained Whisper model using the
-`faster-whisper` library.  It exposes a single function
-`transcribe_audio` which accepts a WAV file path and returns a text
-transcription.  You can replace the underlying implementation with any
-other automatic speech recognition model by editing this file.
+This module wraps the faster_whisper WhisperModel to provide two
+convenient functions:
 
-To use the Whisper model you must install `faster-whisper` and have
-FFmpeg installed on your system.
+• transcribe_wav_bytes(buf): transcribe a complete WAV byte string.
+• transcribe_stream(wav_chunks): transcribe a generator of WAV chunks
+  produced by ingestion.audio_stream().
 
-```bash
-pip install faster-whisper
-```
-
-Example usage:
-
-```python
-from medai_osce.asr import transcribe_audio
-
-text = transcribe_audio("/tmp/session.wav", model_size="medium")
-print(text)
-```
+The Whisper model is loaded once and reused.  GPU and half-precision
+support is enabled if available.
 """
 
 from __future__ import annotations
 
-from typing import Optional
+import io
+import os
+from typing import Iterable, List, Tuple
+
+import numpy as np
+import soundfile as sf
+import torch
 
 from faster_whisper import WhisperModel  # type: ignore
 
+# Configuration via environment variables
+ASR_MODEL_SIZE = os.getenv("ASR_MODEL_SIZE", "small")
+ASR_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+ASR_COMPUTE_TYPE = "float16" if ASR_DEVICE == "cuda" else "float32"
 
-def transcribe_audio(
-    audio_path: str,
-    model_size: str = "base",
-    device: str | None = None,
-    language: Optional[str] = None,
-) -> str:
-    """Transcribe a WAV file to text using Whisper.
+# Global model cache
+_model: WhisperModel | None = None
+
+
+def _load_model() -> WhisperModel:
+    """
+    Lazily load the Whisper model and cache it for future calls.
+    """
+    global _model
+    if _model is None:
+        _model = WhisperModel(
+            ASR_MODEL_SIZE,
+            device=ASR_DEVICE,
+            compute_type=ASR_COMPUTE_TYPE,
+        )
+    return _model
+
+
+def _decode_wav_bytes(buf: bytes) -> Tuple[np.ndarray, int]:
+    """
+    Decode a WAV byte buffer into a numpy array and return (audio, sample_rate).
+    """
+    with io.BytesIO(buf) as f:
+        audio, sr = sf.read(f, dtype="float32")
+    return audio, sr
+
+
+def transcribe_wav_bytes(buf: bytes) -> str:
+    """
+    Transcribe a complete WAV byte string.
 
     Parameters
     ----------
-    audio_path:
-        Path to a WAV file.  The file should be mono and sampled at
-        16 kHz; see ``ingestion.extract_audio`` for producing such a
-        file from an MP4.
-    model_size:
-        Size of the Whisper checkpoint to load.  Available sizes
-        include ``tiny``, ``base``, ``small``, ``medium`` and ``large``.
-        Larger models are more accurate but consume more memory.
-    device:
-        Optional device specifier (e.g. ``"cuda"`` or ``"cpu"``).
-        If ``None``, the model will automatically choose GPU if
-        available, otherwise CPU.
-    language:
-        Optional language code (e.g. ``"en"``).  When ``None``, the
-        model will detect the language automatically.  Providing the
-        language can improve accuracy and speed.
+    buf:
+        Bytes containing WAV-encoded audio.
 
     Returns
     -------
     str
-        The concatenated transcript of the audio file.
+        The transcription as a single string.
     """
-    # Instantiate the model.  It is recommended to cache the model
-    # outside of this function in production.  For simplicity we load
-    # it here; the overhead is a few seconds on first call.
-    model = WhisperModel(model_size, device=device or "auto")
-    segments, _info = model.transcribe(audio_path, beam_size=5, language=language)
-    transcript_parts = [seg.text.strip() for seg in segments if seg.text]
-    return " ".join(transcript_parts)
+    audio, _ = _decode_wav_bytes(buf)
+    model = _load_model()
+    # Do not pass sample_rate to faster_whisper; the model infers it
+    segments, _ = model.transcribe(audio)
+    return " ".join(seg.text for seg in segments)
+
+
+def transcribe_stream(wav_chunks: Iterable[bytes], overlap: float = 0.5) -> str:
+    """
+    Transcribe a sequence of contiguous WAV chunks yielded by ingestion.audio_stream().
+
+    Each chunk is decoded and transcribed.  To avoid missing words at
+    boundaries, the last ``overlap`` seconds of the previous chunk are
+    prepended to the current chunk before transcription.
+
+    Parameters
+    ----------
+    wav_chunks:
+        Iterable of WAV byte strings in sequence.
+    overlap:
+        Seconds of audio to overlap between chunks.  Defaults to 0.5s.
+
+    Returns
+    -------
+    str
+        The concatenated transcription of all chunks.
+    """
+    model = _load_model()
+    full_text: List[str] = []
+    last_audio: np.ndarray | None = None
+
+    # Assumed sample rate based on ffmpeg conversion (16kHz)
+    assumed_sr = 16000
+
+    for chunk in wav_chunks:
+        audio, _ = _decode_wav_bytes(chunk)
+        if last_audio is not None:
+            n_samples = int(overlap * assumed_sr)
+            audio = np.concatenate((last_audio[-n_samples:], audio))
+        # Call transcribe without sample_rate; faster_whisper handles resampling
+        segments, _ = model.transcribe(audio)
+        full_text.extend(seg.text for seg in segments)
+        last_audio = audio
+
+    return " ".join(full_text)

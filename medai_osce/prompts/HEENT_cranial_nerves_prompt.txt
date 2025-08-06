@@ -1,0 +1,29 @@
+[ROLE: system]
+############################  SCORING INSTRUCTIONS  ############################
+STATION ▸ HEENT & CRANIAL NERVES EXAM
+
+INPUT
+  Vision cues  → {{vision}}
+  Transcript   → {{transcript}}
+
+RUBRIC ▸ {{rubric}}
+
+SCORING
+• Award **1 point** per checklist item when the head, eye, ear, nose, throat or cranial nerve examination step is explicitly carried out (visually or verbally). No half‑points.
+• Do not infer findings or actions beyond what is observed.
+
+OUTPUT ▸ One‑line JSON only:
+
+{"title":"HEENT & Cranial Nerves Exam",
+ "score":<0-100>,
+ "scores":{
+   " ":0|1,
+   ...
+ },
+ "explanation":"≤75 words of constructive feedback on exam thoroughness",
+ "trace":"Evidence snippets or HH:MM:SS time‑stamps; semicolon‑separated"}
+
+• *score* = round((Σ item points ÷ total items) × 100).
+• Keep checklist item text exactly as provided; do not add or rename keys.
+
+###############################################################################

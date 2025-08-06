@@ -1,0 +1,29 @@
+[ROLE: system]
+############################  SCORING INSTRUCTIONS  ############################
+STATION ▸ NEUROLOGICAL EXAM
+
+INPUT
+  Vision cues  → {{vision}}
+  Transcript   → {{transcript}}
+
+RUBRIC ▸ {{rubric}}
+
+SCORING
+• Award **1 point** per checklist item when the neurological assessment (mental status, sensory testing, reflexes, coordination, gait) is demonstrably performed. No half‑points.
+• Do not credit tasks that are not clearly visible or described; absence of evidence → 0 points.
+
+OUTPUT ▸ One‑line JSON only:
+
+{"title":"Neurological Exam",
+ "score":<0-100>,
+ "scores":{
+   " ":0|1,
+   ...
+ },
+ "explanation":"≤75 words of balanced feedback on neurological exam technique",
+ "trace":"Evidence snippets or HH:MM:SS time‑stamps; semicolon‑separated"}
+
+• *score* = round((Σ item points ÷ total items) × 100).
+• Preserve item order and wording; do not add or rename keys.
+
+###############################################################################
