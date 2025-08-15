@@ -1,4 +1,35 @@
-{
-  "session": "medai_osce",
-  "results": []
-}
+[
+  {
+    "title": "Communication & Engagement",
+    "score": 100,
+    "scores": {
+      "Greets patient, introduces self & clarifies role": 1,
+      "Uses clear, jargon-free language at an appropriate pace": 1,
+      "Employs an empathetic, respectful tone throughout": 1,
+      "Validates patient concerns aloud (e.g. “I understand this is worrying…”)": 1,
+      "Practises active listening (paraphrases / summaries to confirm)": 1,
+      "Avoids interruptions and negative non-verbals (eye-rolling, sighs)": 1,
+      "Adapts explanations to patient’s emotional & educational level": 1,
+      "Periodically checks understanding or invites questions": 1,
+      "Responds appropriately to verbal **and** non-verbal patient cues": 1
+    },
+    "explanation": "Excellent job in demonstrating effective communication and engagement throughout the interaction. You maintained a respectful and empathetic tone, actively listened to the patient, and adapted your explanations to their level. Your responses were appropriate, and you validated the patient's concerns. Keep up the great work!",
+    "trace": "Full conversation"
+  },
+  {
+    "title": "Professionalism & Behaviour",
+    "score": 100,
+    "scores": {
+      "Maintains respectful verbal & non-verbal demeanour": 1,
+      "Appropriate attire and professional grooming": 1,
+      "Performs hand hygiene before **and** after patient contact": 1,
+      "Keeps suitable physical distance; observes boundaries": 1,
+      "Seeks explicit consent before sensitive questions or exam": 1,
+      "Controls facial expressions & tone (no sighs, eye-rolls, sarcasm)": 1,
+      "Remains calm and composed under pressure or uncertainty": 1,
+      "Thanks patient, clarifies next steps, and closes visit courteously": 1
+    },
+    "explanation": "The student demonstrated professionalism throughout the interaction, maintaining a respectful demeanor, appropriate attire, and seeking explicit consent before sensitive questions or exams. They also remained calm under pressure, thanked the patient, and provided a clear explanation of next steps at the end of the visit.",
+    "trace": "Throughout the entire interaction; At the end of the visit"
+  }
+]

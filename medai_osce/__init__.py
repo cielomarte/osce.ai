@@ -5,5 +5,6 @@ Importing this package makes the submodules ``ingestion``, ``asr``,
 ``medai_osce/grade_session.py`` as a CLI entry point to process
 sessions.
 """
-
-__all__ = ["ingestion", "asr", "vision", "scoring"]
+# medai_osce/__init__.py
+__all__ = ["asr", "ingestion", "scoring", "vision"]
+__version__ = "0.3.0-offline"
