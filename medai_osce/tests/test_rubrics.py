@@ -1,4 +1,4 @@
- """Simple tests to validate rubric JSON files.
+"""Simple tests to validate rubric JSON files.
 
 Run these tests with pytest to ensure that new rubrics conform to the
 expected schema (title: str, checklist: list of strings, no extra
